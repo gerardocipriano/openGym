@@ -4,6 +4,7 @@ import { webauthnOK, passkeyLogin, passkeyRegister, passkeyError, bio } from '..
 import { hasData } from '../store/useStore.js'
 import { t } from '../lib/i18n.js'
 import { DEMO, REPO } from '../lib/demo.js'
+import { FIREBASE } from '../lib/firebase-config.js'
 import { guestAllowed } from '../lib/guest.js'
 import { useState, useRef, useEffect } from 'react'
 import Icon from '../components/Icon.jsx'
@@ -95,6 +96,27 @@ export default function Login() {
       </div>
     </div>
   )
+
+  // Firebase build: Google account instead of passkeys, data in Firestore (lib/firebase-shim.js).
+  if (FIREBASE) {
+    const google = async () => {
+      try {
+        const { firebaseSignIn } = await import('../lib/firebase-shim.js')
+        const u = await firebaseSignIn()
+        if (!u) return   // redirect fallback: the page reloads signed in
+        setUser(u, { adopt: true }); await adoptProfile(askAddDeviceData); useUI.getState().toast(t('Welcome back, {0}', u.name))
+      } catch (e) { if (e?.code !== 'auth/popup-closed-by-user' && e?.code !== 'auth/cancelled-popup-request') useUI.getState().toast(e?.message || t('Sign-in failed')) }
+    }
+    return (
+      <div className="narrow" style={wrap}>
+        {head}
+        <div className="muted" style={{ marginBottom: 34 }}>{t('Your workouts. Your weights. Your profile.')}</div>
+        <Button variant="primary" icon="cloud" onClick={google}>Google</Button>
+        <div style={{ height: 10 }} />
+        <Button variant="ghost" className="dim" onClick={() => setGuest(true)}>{t('Continue without account')}</Button>
+      </div>
+    )
+  }
 
   return (
     <div className="narrow" style={wrap}>
